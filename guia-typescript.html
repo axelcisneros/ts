@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>TypeScript de principio a fin: guía de clase y práctica</title>
+  <style>
+    @page { margin: 1.8cm; }
+    body { font-family: Arial, sans-serif; color: #172539; font-size: 11pt; line-height: 1.35; }
+    h1 { font-size: 27pt; color: #174e78; }
+    h2 { font-size: 19pt; color: #174e78; border-bottom: 1px solid #9db9ca; }
+    h3 { font-size: 13pt; color: #214f66; }
+    p { margin: 0.4em 0; }
+    pre { font-family: Consolas, monospace; font-size: 9pt; background: #edf3f7; padding: 9px; white-space: pre-wrap; }
+    code { font-family: Consolas, monospace; }
+    .page { page-break-before: always; }
+    .note { background: #eff6f6; padding: 9px; }
+    li { margin-bottom: 0.25em; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #aebdc8; padding: 5px; text-align: left; vertical-align: top; }
+    a { color: #125c8a; }
+  </style>
+</head>
+<body>
+  <h1>TypeScript de principio a fin</h1>
+  <p><strong>Guía de clase, ejemplos y proyecto de migración</strong></p>
+  <p>De JavaScript a TypeScript con programación orientada a objetos y separación de responsabilidades.</p>
+  <h3>Objetivos de aprendizaje</h3>
+  <ul>
+    <li>Comprender cómo TypeScript comprueba programas JavaScript antes de ejecutarlos.</li>
+    <li>Modelar datos con tipos, interfaces, uniones y genéricos.</li>
+    <li>Aplicar clases, composición y contratos sin confundir tipos con validación en ejecución.</li>
+    <li>Migrar un proyecto real pequeño y verificar que conserva su comportamiento.</li>
+  </ul>
+  <h3>Ruta sugerida para una clase de 3 horas</h3>
+  <table>
+    <tr><th>Bloque</th><th>Tiempo</th><th>Actividad</th></tr>
+    <tr><td>Fundamentos y configuración</td><td>25 min</td><td>Compilar y ejecutar el primer programa.</td></tr>
+    <tr><td>Tipos, funciones y narrowing</td><td>50 min</td><td>Resolver ejemplos y detectar errores.</td></tr>
+    <tr><td>POO, genéricos y asincronía</td><td>35 min</td><td>Diseñar contratos y validar datos.</td></tr>
+    <tr><td>Proyecto de migración</td><td>60 min</td><td>Convertir, compilar y ejecutar pruebas.</td></tr>
+    <tr><td>Cierre</td><td>10 min</td><td>Revisar decisiones y preguntas.</td></tr>
+  </table>
+  <p class="note"><strong>Requisitos:</strong> nociones básicas de JavaScript, terminal y Node.js 18 o posterior. El proyecto inicial no requiere paquetes externos.</p>
+  <p><strong>Contenido:</strong> 1. Qué es TS · 2. Preparación · 3. Tipos · 4. Funciones y objetos · 5. Uniones · 6. POO · 7. Genéricos · 8. Asincronía · 9. Proyecto · 10. Migración · 11. Ejercicios · 12. Cierre.</p>
+
+  <h2 class="page">1. ¿Qué es TypeScript?</h2>
+  <p>TypeScript (TS) es JavaScript con un sistema de tipos estático. El compilador <code>tsc</code> analiza el código y emite JavaScript; Node.js o el navegador ejecutan el JavaScript resultante. Los tipos se eliminan durante la compilación.</p>
+  <pre>const nombre: string = "Ana";
+console.log(`Hola, ${nombre}`);</pre>
+  <p>El editor puede detectar incompatibilidades antes de ejecutar, ofrecer autocompletado y facilitar refactorizaciones. TS no garantiza que un dato recibido por red sea válido y tampoco sustituye las pruebas.</p>
+  <pre>let edad: number = 25;
+// edad = "veinticinco"; // ERROR: string no es number</pre>
+  <p><strong>Inferencia:</strong> si escribimos <code>let edad = 25</code>, TS normalmente infiere <code>number</code>. No es necesario anotar cada variable; sí conviene explicitar contratos públicos y datos cuya forma no sea evidente.</p>
+  <h3>Del código a la ejecución</h3>
+  <pre>archivo.ts  →  tsc comprueba y compila  →  archivo.js  →  Node.js</pre>
+  <p><code>noEmitOnError</code> impide producir archivos de salida si hay errores. Una compilación correcta no demuestra que la lógica sea correcta: también hay que ejecutar pruebas.</p>
+  <h3>Primera conversación en clase</h3>
+  <p>¿En qué momento se descubre que se envió un texto a una función que espera un número en JavaScript? ¿Qué cambia al comprobarlo con TS?</p>
+
+  <h2 class="page">2. Preparación y primer programa</h2>
+  <p>En una carpeta nueva, inicializa el proyecto e instala TypeScript localmente:</p>
+  <pre>npm init -y
+npm install --save-dev typescript
+npx tsc --init</pre>
+  <p>En PowerShell de Windows, si la política bloquea los scripts, usa <code>npm.cmd</code> y <code>npx.cmd</code>. Para un ejemplo aislado crea <code>hola.ts</code>:</p>
+  <pre>function saludar(nombre: string): string {
+  return `Hola, ${nombre}`;
+}
+console.log(saludar("Ada"));</pre>
+  <pre>npx tsc hola.ts --target ES2020
+node hola.js</pre>
+  <p>Resultado: <code>Hola, Ada</code>. Para un proyecto real utiliza <code>npx tsc -p tsconfig.json</code> en lugar de pasar archivos individuales: así se usa la configuración del proyecto.</p>
+  <h3>Opciones esenciales</h3>
+  <table>
+    <tr><th>Opción</th><th>Finalidad</th></tr>
+    <tr><td><code>strict</code></td><td>Activa comprobaciones estrictas, incluidos null y los tipos implícitos.</td></tr>
+    <tr><td><code>target</code></td><td>Define la versión de JavaScript generada.</td></tr>
+    <tr><td><code>rootDir</code> / <code>outDir</code></td><td>Separa archivos fuente de archivos compilados.</td></tr>
+    <tr><td><code>module</code> / <code>moduleResolution</code></td><td>Adaptan módulos y resolución al entorno de ejecución.</td></tr>
+    <tr><td><code>noEmitOnError</code></td><td>No genera nueva salida si el compilador detecta errores.</td></tr>
+  </table>
+  <p>La configuración concreta para el proyecto Node con módulos ES aparece en la sección 10.</p>
+
+  <h2 class="page">3. Tipos básicos y colecciones</h2>
+  <pre>const nombre: string = "Lucía";
+const edad: number = 30;
+const activa: boolean = true;
+const sinValor: null = null;
+const pendiente: undefined = undefined;
+
+const etiquetas: string[] = ["ts", "poo"];
+const precios: Array&lt;number&gt; = [10, 20];
+const coordenada: [number, number] = [19.43, -99.13];</pre>
+  <p>Una <strong>tupla</strong> expresa posiciones con tipos conocidos. Un arreglo normal permite una cantidad variable de elementos. Las versiones <code>readonly string[]</code> y <code>readonly [number, number]</code> impiden cambios mediante esa referencia durante la comprobación de tipos.</p>
+  <h3>Literales y uniones</h3>
+  <pre>type Estado = "pendiente" | "completada";
+let estado: Estado = "pendiente";
+estado = "completada";
+// estado = "cancelada"; // ERROR: valor fuera de la unión</pre>
+  <p>Un alias <code>type</code> da nombre a un tipo; no crea una clase ni un valor en tiempo de ejecución. Las uniones también combinan tipos distintos: <code>string | number</code>.</p>
+  <h3>Tipos especiales</h3>
+  <ul>
+    <li><code>unknown</code>: valor desconocido; debe comprobarse antes de usarlo.</li>
+    <li><code>any</code>: desactiva muchas comprobaciones; evítalo si se puede modelar el dato.</li>
+    <li><code>void</code>: una función no proporciona un resultado útil.</li>
+    <li><code>never</code>: una función no retorna normalmente, por ejemplo si siempre lanza una excepción.</li>
+  </ul>
+  <pre>function fallar(mensaje: string): never {
+  throw new Error(mensaje);
+}</pre>
+
+  <h2 class="page">4. Objetos, interfaces y funciones</h2>
+  <pre>interface Persona {
+  readonly id: number;
+  nombre: string;
+  correo?: string;
+}
+
+function describir(persona: Persona): string {
+  return `${persona.nombre} (${persona.correo ?? "sin correo"})`;
+}
+const persona: Persona = { id: 1, nombre: "Ana" };
+console.log(describir(persona));</pre>
+  <p><code>?</code> marca una propiedad opcional; al leerla puede ser <code>undefined</code>. <code>readonly</code> limita la escritura desde TS, pero no congela el objeto en ejecución. <code>??</code> usa el valor alternativo únicamente para <code>null</code> o <code>undefined</code>.</p>
+  <p>TS usa tipado estructural: un objeto compatible debe proporcionar las propiedades requeridas con tipos compatibles. Una <code>interface</code> es adecuada para contratos de objetos; un <code>type</code> también permite uniones, tuplas y otras composiciones.</p>
+  <pre>function sumar(a: number, b = 0): number {
+  return a + b;
+}
+function registrar(mensaje: string): void {
+  console.log(mensaje);
+}
+const duplicar = (n: number): number =&gt; n * 2;</pre>
+  <p>Un parámetro con valor por defecto puede omitirse. Los tipos de parámetros y retorno permiten detectar llamadas incompatibles; por ejemplo, <code>sumar("2", 3)</code> es un error de compilación.</p>
+  <h3>Intersección</h3>
+  <pre>type Identificable = { id: number };
+type ConNombre = { nombre: string };
+type Usuario = Identificable &amp; ConNombre;
+const usuario: Usuario = { id: 1, nombre: "Ana" };</pre>
+
+  <h2 class="page">5. Uniones, narrowing y seguridad</h2>
+  <p>Antes de usar una operación específica de un miembro de una unión, demuestra cuál es mediante una comprobación. Esto se conoce como <em>narrowing</em>.</p>
+  <pre>function mostrarId(id: string | number): string {
+  if (typeof id === "string") {
+    return id.toUpperCase();
+  }
+  return id.toFixed(0);
+}</pre>
+  <h3>Datos externos y unknown</h3>
+  <pre>function leerNombre(valor: unknown): string {
+  if (typeof valor !== "object" || valor === null ||
+      !("nombre" in valor) ||
+      typeof valor.nombre !== "string") {
+    throw new Error("Nombre inválido");
+  }
+  return valor.nombre;
+}
+const dato: unknown = JSON.parse('{"nombre":"Ana"}');
+console.log(leerNombre(dato));</pre>
+  <p><code>JSON.parse</code> no valida la forma de los datos. Asignar su resultado a <code>unknown</code> obliga a comprobarlo. Una aserción como <code>dato as Persona</code> no realiza validación; úsala solo cuando exista una garantía real.</p>
+  <h3>Unión discriminada</h3>
+  <pre>type Resultado =
+  | { ok: true; valor: number }
+  | { ok: false; error: string };
+
+function imprimir(r: Resultado): void {
+  if (r.ok) console.log(r.valor);
+  else console.error(r.error);
+}</pre>
+  <p>El campo literal <code>ok</code> permite distinguir las variantes. Con <code>strictNullChecks</code>, una búsqueda puede devolver <code>Tarea | undefined</code> y debe comprobarse antes de acceder a sus propiedades.</p>
+
+  <h2 class="page">6. POO: clases y responsabilidades</h2>
+  <pre>interface Completables {
+  completar(): void;
+}
+
+class Tarea implements Completables {
+  readonly id: number;
+  titulo: string;
+  private completada = false;
+
+  constructor(id: number, titulo: string) {
+    if (!titulo.trim()) throw new Error("Título obligatorio");
+    this.id = id;
+    this.titulo = titulo.trim();
+  }
+  completar(): void { this.completada = true; }
+  estaCompletada(): boolean { return this.completada; }
+}</pre>
+  <p>La clase construye objetos y agrupa estado con comportamiento. <code>implements</code> comprueba que la clase cumple un contrato; no copia su implementación. <code>private</code> de TS restringe el acceso durante la comprobación; si se necesita privacidad real en ejecución, considera los campos JavaScript <code>#privados</code>.</p>
+  <h3>Composición antes que acoplamiento</h3>
+  <pre>interface Repositorio {
+  guardar(tarea: Tarea): void;
+  buscarPorId(id: number): Tarea | undefined;
+}
+
+class Servicio {
+  constructor(private repositorio: Repositorio) {}
+  completar(id: number): void {
+    const tarea = this.repositorio.buscarPorId(id);
+    if (!tarea) throw new Error("Tarea inexistente");
+    tarea.completar();
+    this.repositorio.guardar(tarea);
+  }
+}</pre>
+  <p>El servicio depende de un contrato, no de una implementación concreta. El parámetro <code>private repositorio</code> declara e inicializa una propiedad de la clase. El ejemplo es conceptual; el proyecto de práctica usa nombres y operaciones adicionales.</p>
+
+  <h2 class="page">7. Genéricos y utilidades</h2>
+  <p>Un genérico conserva la relación entre los tipos de entrada y salida sin duplicar la función para cada tipo.</p>
+  <pre>function primero&lt;T&gt;(elementos: readonly T[]): T | undefined {
+  return elementos[0];
+}
+const numero = primero([10, 20]); // number | undefined
+const texto = primero(["a", "b"]); // string | undefined</pre>
+  <p>También se pueden establecer restricciones:</p>
+  <pre>function obtenerId&lt;T extends { id: number }&gt;(valor: T): number {
+  return valor.id;
+}
+obtenerId({ id: 4, nombre: "Ana" });</pre>
+  <h3>Utilidades de tipos habituales</h3>
+  <pre>interface Perfil {
+  nombre: string;
+  correo: string;
+}
+type CambiosPerfil = Partial&lt;Perfil&gt;;
+type NombrePerfil = Pick&lt;Perfil, "nombre"&gt;;
+type Perfiles = Record&lt;string, Perfil&gt;;</pre>
+  <ul>
+    <li><code>Partial&lt;T&gt;</code>: hace opcionales las propiedades de primer nivel.</li>
+    <li><code>Pick&lt;T, K&gt;</code>: selecciona propiedades.</li>
+    <li><code>Record&lt;K, V&gt;</code>: describe valores asociados a claves.</li>
+  </ul>
+  <p>Estas utilidades describen tipos; no transforman ni validan objetos en ejecución. Evita genéricos cuando no expresen una relación útil entre tipos.</p>
+
+  <h2 class="page">8. Promesas, errores y límites</h2>
+  <pre>async function cargarNombre(): Promise&lt;string&gt; {
+  const respuesta = await fetch("https://example.com/api/persona");
+  if (!respuesta.ok) {
+    throw new Error(`HTTP ${respuesta.status}`);
+  }
+  const dato: unknown = await respuesta.json();
+  return leerNombre(dato); // función definida en la sección 5
+}</pre>
+  <p>Esta URL es ilustrativa, no es un servicio preparado para el ejercicio. Una función <code>async</code> devuelve una promesa; comprueba el estado HTTP y valida el cuerpo antes de usarlo.</p>
+  <pre>try {
+  const nombre = await cargarNombre();
+  console.log(nombre);
+} catch (error: unknown) {
+  if (error instanceof Error) console.error(error.message);
+  else console.error("Error desconocido", error);
+}</pre>
+  <p>Este bloque con <code>await</code> superior debe estar en un módulo que lo admita. El ejemplo requiere un entorno con <code>fetch</code>, por ejemplo Node.js 18 o posterior. No ignores los errores ni devuelvas un resultado que aparente éxito.</p>
+  <h3>Lista mental para datos externos</h3>
+  <ol>
+    <li>Recibir como <code>unknown</code>.</li>
+    <li>Validar forma, propiedades y reglas de negocio.</li>
+    <li>Informar el error si no cumple el contrato.</li>
+    <li>Operar con el valor una vez comprobado.</li>
+  </ol>
+  <p>La validación de negocio puede seguir siendo necesaria incluso con parámetros tipados: una cadena puede estar vacía y un número puede ser negativo.</p>
+
+  <h2 class="page">9. Proyecto: gestor de tareas en JavaScript</h2>
+  <p>El proyecto adjunto <code>proyecto-tareas-js</code> es una aplicación de consola sin dependencias. Usa datos en memoria: se pierden al finalizar el proceso. No necesita servidor ni base de datos.</p>
+  <pre>proyecto-tareas-js/
+  src/
+    Tarea.js
+    RepositorioTareas.js
+    ServicioTareas.js
+    PresentadorTareas.js
+    index.js
+  test/tareas.test.js
+  package.json
+  README.md</pre>
+  <table>
+    <tr><th>Clase</th><th>Responsabilidad</th></tr>
+    <tr><td>Tarea</td><td>Datos de la tarea, validación y cambio de estado.</td></tr>
+    <tr><td>RepositorioTareas</td><td>Generación de identificadores y almacenamiento en un Map.</td></tr>
+    <tr><td>ServicioTareas</td><td>Creación, búsqueda y finalización de tareas.</td></tr>
+    <tr><td>PresentadorTareas</td><td>Representación de la lista en consola.</td></tr>
+  </table>
+  <p><code>index.js</code> crea y conecta los objetos. El repositorio conserva referencias a las instancias; no ofrece aislamiento ni persistencia. El servicio verifica que exista una tarea antes de completarla.</p>
+  <pre>cd proyecto-tareas-js
+npm.cmd start
+npm.cmd test</pre>
+  <p>En macOS/Linux utiliza <code>npm</code> en lugar de <code>npm.cmd</code>. La salida demuestra una tarea pendiente y otra completada; las pruebas cubren creación, actualización y errores.</p>
+
+  <h2 class="page">10. Migración guiada: configuración</h2>
+  <p>Realiza la migración sobre una copia del proyecto si deseas conservar el original. En la carpeta del proyecto instala TS y crea <code>tsconfig.json</code>:</p>
+  <pre>npm.cmd install --save-dev typescript</pre>
+  <pre>{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": true,
+    "noEmitOnError": true
+  },
+  "include": ["src/**/*.ts"]
+}</pre>
+  <p>En este contexto NodeNext adapta los módulos a Node. El <code>package.json</code> ya incluye <code>"type": "module"</code>. En archivos fuente <code>.ts</code>, conserva los imports relativos con extensión <code>.js</code>: TS resuelve el archivo fuente y Node encontrará el JavaScript compilado.</p>
+  <p>Agrega al objeto <code>scripts</code> del <code>package.json</code>:</p>
+  <pre>"build": "tsc -p tsconfig.json",
+"start:ts": "node dist/index.js"</pre>
+  <p>Sepáralos con comas de los scripts existentes. Renombra todos los archivos de <code>src</code> de <code>.js</code> a <code>.ts</code>; conserva los nombres de los imports con <code>.js</code>. Compila al terminar cada bloque, sabiendo que aparecerán errores mientras falten anotaciones:</p>
+  <pre>npm.cmd run build
+npm.cmd run start:ts</pre>
+  <p><strong>Importante:</strong> <code>noEmitOnError</code> no elimina una salida antigua de <code>dist</code>. No ejecutes una compilación anterior después de un fallo; corrige los errores y vuelve a compilar.</p>
+
+  <h2 class="page">11. Migración guiada: implementación</h2>
+  <ol>
+    <li><strong>Tarea:</strong> declara las propiedades <code>id: number</code>, <code>titulo: string</code> y <code>completada: boolean</code>. Anota el constructor y <code>completar(): void</code>. Conserva las validaciones actuales.</li>
+    <li><strong>Repositorio:</strong> importa <code>Tarea</code> y tipa el mapa como <code>Map&lt;number, Tarea&gt;</code>. Anota <code>generarId(): number</code>, <code>guardar(tarea: Tarea): void</code>, <code>buscarPorId(id: number): Tarea | undefined</code> y <code>listar(): Tarea[]</code>.</li>
+    <li><strong>Contrato:</strong> crea una interfaz que declare esos cuatro métodos y haz que <code>RepositorioTareas</code> la implemente. El servicio debe recibir el contrato, no la clase concreta.</li>
+    <li><strong>Servicio:</strong> tipa su propiedad de repositorio, el constructor y los métodos. <code>crear(titulo: string): Tarea</code>, <code>completar(id: number): Tarea</code> y <code>listar(): Tarea[]</code>. Mantén la comprobación de tarea inexistente.</li>
+    <li><strong>Presentador:</strong> recibe <code>Tarea[]</code> y retorna <code>void</code>. Mantén la salida de consola y la opción de lista vacía.</li>
+    <li><strong>Entrada:</strong> conserva el ensamblaje en <code>index.ts</code>; compila y ejecuta la demostración.</li>
+  </ol>
+  <p>El contrato puede vivir en su propio archivo, por ejemplo <code>Repositorio.ts</code>. Usa <code>import type</code> cuando una importación solo se necesite como tipo.</p>
+  <pre>import type { Tarea } from "./Tarea.js";
+
+export interface Repositorio {
+  generarId(): number;
+  guardar(tarea: Tarea): void;
+  buscarPorId(id: number): Tarea | undefined;
+  listar(): Tarea[];
+}</pre>
+  <p>Las pruebas son JavaScript y llaman al código en ejecución. Tras renombrar <code>src</code>, cambia sus imports de <code>../src/...</code> a <code>../dist/...</code>, compila y ejecuta <code>npm.cmd test</code>. La prueba con <code>null</code> sigue comprobando la validación en ejecución, aunque una llamada equivalente desde TS sea inválida.</p>
+
+  <h2 class="page">12. Ejercicios y comprobación final</h2>
+  <h3>Ejercicios</h3>
+  <ol>
+    <li>Añade una operación <code>pendientes(): Tarea[]</code> en el servicio. Verifica una lista vacía y otra con tareas de ambos estados.</li>
+    <li>Modela un resultado discriminado <code>{ ok: true; tarea: Tarea } | { ok: false; error: string }</code> para una nueva operación de consulta; procesa ambos casos sin aserciones.</li>
+    <li>Define un repositorio alternativo en memoria que implemente la interfaz y úsalo con el mismo servicio. ¿Qué código del servicio tuvo que cambiar?</li>
+  </ol>
+  <h3>Criterios de aceptación de la migración</h3>
+  <ul>
+    <li>La compilación con <code>strict</code> finaliza sin errores ni <code>any</code> añadido para ocultarlos.</li>
+    <li>El programa compilado produce los mismos estados y títulos que el original.</li>
+    <li>Las pruebas existentes apuntan al código compilado y pasan después de compilar.</li>
+    <li>Los datos inválidos y los identificadores inexistentes siguen produciendo errores explícitos.</li>
+    <li>El servicio depende de la interfaz; el repositorio resuelve búsquedas ausentes de forma segura.</li>
+    <li>Cada clase mantiene su responsabilidad y los datos siguen siendo exclusivamente en memoria.</li>
+  </ul>
+  <h3>Preguntas de cierre</h3>
+  <p>¿Por qué <code>string</code> no garantiza que el título contenga texto? ¿Por qué una búsqueda devuelve <code>undefined</code>? ¿Qué diferencia hay entre <code>unknown</code> y <code>any</code>? ¿Qué protege una interfaz en ejecución?</p>
+  <h3>Fuentes oficiales para ampliar</h3>
+  <ul>
+    <li><a href="https://www.typescriptlang.org/docs/handbook/intro.html">TypeScript Handbook</a></li>
+    <li><a href="https://www.typescriptlang.org/tsconfig/">Referencia de TSConfig</a></li>
+    <li><a href="https://nodejs.org/api/esm.html">Módulos ECMAScript en Node.js</a></li>
+  </ul>
+  <p><strong>Idea clave:</strong> usa los tipos para expresar contratos, validaciones para proteger los límites y pruebas para verificar el comportamiento.</p>
+</body>
+</html>
